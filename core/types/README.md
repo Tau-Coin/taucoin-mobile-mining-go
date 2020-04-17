@@ -1,9 +1,8 @@
 # transaction.go
-`
 TXsJSON, flexible bytes
 = {
-         version:  uint8,          //"0x1" as default;
-        chainid: [32+ 4+ 32]byte // `Nickname`+ `blocktime` + hash(signature(timestampinRelaySwitchTimeUnit))
+version:  uint8,          //"0x1" as default;
+chainid: [32+ 4+ 32]byte // `Nickname`+ `blocktime` + hash(signature(timestampinRelaySwitchTimeUnit))
 sender: [20]byte        //TAU address, for IPLD codec
 nounce: uint64
 timestamp:  uint32,    //unix timestamp
@@ -47,4 +46,3 @@ signature: [65]byte,  //r: 32 bytes, s: 32 bytes, v: 1 byte
 3. Relay annoucement operation
 * stateroot.hamt_update(RelayNounce , ++)
 * stateroot.hamt_add(RelayNounceAddress, msg)
-`
