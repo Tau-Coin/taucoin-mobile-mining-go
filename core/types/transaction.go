@@ -17,7 +17,6 @@
 package types
 
 import (
-	//"container/heap"
 	"container/heap"
 	"errors"
 	"io"
