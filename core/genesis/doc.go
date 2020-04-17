@@ -28,7 +28,7 @@
 // 	config contains time that this was connected successfully in unit relayswithtimeunit=15s
 // 1.5 please specify below value a config file ?
 // 	version uint64
-// 	timestampinrelaytimeunit uint64 (example current unix time 1500000 to 1500015 will have same birthday unix/15)
+// 	timestampinrelaytimeunit uint32 (example current unix time 1500000 to 1500015 will have same birthday unix/15)
 // 	contractnum int32
 // 	(
 // 	nickname [32]byte, blocktime uint8 default 5min, sign timestampinrelaytimeunit with tau private key
@@ -46,7 +46,7 @@
 // 	msg []byte contains optional msg like your vision
 // 	signature tau private key sign this contract ,others can recover genesis tau address
 // 1.6 construct genesis contract Y if before have no error
-// 1.7 execuate genesis will be update hamt,temporary vaiable and db locally.
+// 2.0 execuate genesis will update hamt,temporary vaiable and db locally.
 // 	hamt:
 // 	1 contract per hamt here will be create , and update from now on.
 // 	hamt := new hamt()
