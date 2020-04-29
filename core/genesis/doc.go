@@ -31,11 +31,11 @@
 // 	timestampinrelaytimeunit uint32 (example current unix time 1500000 to 1500015 will have same birthday unix/15)
 // 	blocknum int32 default 0
 // 	previousblockroot nil
-// 	basetarget [32]byte default ?
+// 	basetarget [32]byte default 0x21d0369d036978
 // 	cummulativedifficulty int64 / [32]byte default = 0 at here.
 // 	generationSignature [32]byte random
 // 	IPLDsigon [65]byte node ipfs private key sign tauaddr to show relationship ipfs and tauaddress locally.
-//msg []byte contains initalK-V that is initial state. nonce is previous value in tau and 0 in others, 1th block is allowed to be mined with 0
+//msg []byte contains initalK-V that is initial state. nonce is previous value in tau and 0 in others, 1st block is allowed to be mined with 0
 // 	chainid [32 + 32]byte (nickname [32]byte,hash(timestampinrelaytimeunit and tau private key))
 // 	signature tau private key sign this contract ,others can recover genesis tau address
 // 1.6 construct genesis block g if before have no error
