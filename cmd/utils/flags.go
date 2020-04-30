@@ -261,15 +261,6 @@ var (
 		Usage: "Disable heuristic state prefetch during block import (less CPU and disk IO, more time waiting for data)",
 	}
 	// Miner settings
-	MiningEnabledFlag = cli.BoolFlag{
-		Name:  "mine",
-		Usage: "Enable mining",
-	}
-	MinerThreadsFlag = cli.IntFlag{
-		Name:  "miner.threads",
-		Usage: "Number of CPU threads to use for mining",
-		Value: 0,
-	}
 	MinerFeeFloorFlag = BigFlag{
 		Name:  "miner.feefloor",
 		Usage: "Minimum fee for mining a transaction",
@@ -286,11 +277,6 @@ var (
 		Value: tau.DefaultConfig.Miner.Recommit,
 	}
 	// Account settings
-	UnlockedAccountFlag = cli.StringFlag{
-		Name:  "unlock",
-		Usage: "Comma separated list of accounts to unlock",
-		Value: "",
-	}
 	PasswordFileFlag = cli.StringFlag{
 		Name:  "password",
 		Usage: "Password file to use for non-interactive password input",

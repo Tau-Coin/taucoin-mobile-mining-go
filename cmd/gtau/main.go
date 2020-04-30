@@ -24,11 +24,8 @@ import (
 	"runtime"
 	godebug "runtime/debug"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/Tau-Coin/taucoin-mobile-mining-go/accounts"
-	"github.com/Tau-Coin/taucoin-mobile-mining-go/accounts/keystore"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/cmd/utils"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/common"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/console"
@@ -36,9 +33,8 @@ import (
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/log"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/metrics"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/node"
-	"github.com/Tau-Coin/taucoin-mobile-mining-go/tau"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/tau/downloader"
-	"github.com/Tau-Coin/taucoin-mobile-mining-go/tauclient"
+	//"github.com/Tau-Coin/taucoin-mobile-mining-go/tauclient"
 	"github.com/elastic/gosigar"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -56,7 +52,6 @@ var (
 	// flags that configure the node
 	nodeFlags = []cli.Flag{
 		utils.IdentityFlag,
-		utils.UnlockedAccountFlag,
 		utils.PasswordFileFlag,
 		utils.BootnodesFlag,
 		utils.BootnodesV4Flag,
@@ -88,8 +83,6 @@ var (
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
-		utils.MiningEnabledFlag,
-		utils.MinerThreadsFlag,
 		utils.MinerFeeFloorFlag,
 		utils.MinerTauerbaseFlag,
 		utils.MinerRecommitIntervalFlag,
@@ -139,21 +132,16 @@ func init() {
 	// Initialize the CLI app and start Gtau
 	app.Action = gtau
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2019 The go-tau Authors"
+	app.Copyright = "Copyright 2019-2020 The go-tau Authors"
 
 	app.Flags = append(app.Flags, nodeFlags...)
 	app.Flags = append(app.Flags, rpcFlags...)
-	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Flags = append(app.Flags, metricsFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		logdir := ""
-		/* ctc
-		if ctx.GlobalBool(utils.DashboardEnabledFlag.Name) {
-			logdir = (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
-		}
-		*/
+
 		if err := debug.Setup(ctx, logdir); err != nil {
 			return err
 		}
@@ -177,14 +165,6 @@ func main() {
 // prepare manipulates memory cache allowance and setups metric system.
 // This function should be called before launching devp2p stack.
 func prepare(ctx *cli.Context) {
-	// If we're a full node on mainnet without --cache specified, bump default cache allowance
-	if ctx.GlobalString(utils.SyncModeFlag.Name) != "light" && !ctx.GlobalIsSet(utils.CacheFlag.Name) {
-	}
-	// If we're running a light client on any network, drop the cache to some meaningfully low amount
-	if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" && !ctx.GlobalIsSet(utils.CacheFlag.Name) {
-		log.Info("Dropping default light client cache", "provided", ctx.GlobalInt(utils.CacheFlag.Name), "updated", 128)
-		ctx.GlobalSet(utils.CacheFlag.Name, strconv.Itoa(128))
-	}
 	// Cap the cache allowance and tune the garbage collector
 	var mem gosigar.Mem
 	// Workaround until OpenBSD support lands into gosigar
@@ -231,57 +211,20 @@ func gtau(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
+
 	debug.Memsize.Add("node", stack)
 
 	// Start up the node itself
 	utils.StartNode(stack)
 
-	// Unlock any account specifically requested
-	unlockAccounts(ctx, stack)
-
-	// Register wallet event handlers to open and auto-derive wallets
-	events := make(chan accounts.WalletEvent, 16)
-	stack.AccountManager().Subscribe(events)
-
 	// Create a client to interact with local gtau node.
+	/*
 	rpcClient, err := stack.Attach()
 	if err != nil {
 		utils.Fatalf("Failed to attach to self: %v", err)
 	}
 	tauClient := tauclient.NewClient(rpcClient)
-
-	go func() {
-		// Open any wallets already attached
-		for _, wallet := range stack.AccountManager().Wallets() {
-			if err := wallet.Open(""); err != nil {
-				log.Warn("Failed to open wallet", "url", wallet.URL(), "err", err)
-			}
-		}
-		// Listen for wallet event till termination
-		for event := range events {
-			switch event.Kind {
-			case accounts.WalletArrived:
-				if err := event.Wallet.Open(""); err != nil {
-					log.Warn("New wallet appeared, failed to open", "url", event.Wallet.URL(), "err", err)
-				}
-			case accounts.WalletOpened:
-				status, _ := event.Wallet.Status()
-				log.Info("New wallet appeared", "url", event.Wallet.URL(), "status", status)
-
-				var derivationPaths []accounts.DerivationPath
-				if event.Wallet.URL().Scheme == "ledger" {
-					derivationPaths = append(derivationPaths, accounts.LegacyLedgerBaseDerivationPath)
-				}
-				derivationPaths = append(derivationPaths, accounts.DefaultBaseDerivationPath)
-
-				event.Wallet.SelfDerive(derivationPaths, tauClient)
-
-			case accounts.WalletDropped:
-				log.Info("Old wallet dropped", "url", event.Wallet.URL())
-				event.Wallet.Close()
-			}
-		}
-	}()
+	*/
 
 	// Spawn a standalone goroutine for status synchronization monitoring,
 	// close the node when synchronization is complete if user required.
@@ -305,51 +248,5 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				}
 			}
 		}()
-	}
-
-	// Start auxiliary services if enabled
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
-		// Mining only makes sense if a full Tau node is running
-		if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
-			utils.Fatalf("Light clients do not support mining")
-		}
-		var tau *tau.Tau
-		if err := stack.Service(&tau); err != nil {
-			utils.Fatalf("Tau service not running: %v", err)
-		}
-		// Set the minimum fee to the limits from the CLI and start mining
-		feeFloor := utils.GlobalBig(ctx, utils.MinerFeeFloorFlag.Name)
-		tau.TxPool().SetFeeFloor(feeFloor)
-
-		threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name)
-
-		if err := tau.StartMining(threads); err != nil {
-			utils.Fatalf("Failed to start mining: %v", err)
-		}
-	}
-}
-
-// unlockAccounts unlocks any account specifically requested.
-func unlockAccounts(ctx *cli.Context, stack *node.Node) {
-	var unlocks []string
-	inputs := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
-	for _, input := range inputs {
-		if trimmed := strings.TrimSpace(input); trimmed != "" {
-			unlocks = append(unlocks, trimmed)
-		}
-	}
-	// Short circuit if there is no account to unlock.
-	if len(unlocks) == 0 {
-		return
-	}
-	// If insecure account unlocking is not allowed if node's APIs are exposed to external.
-	// Print warning log to user and skip unlocking.
-	if !stack.Config().InsecureUnlockAllowed && stack.Config().ExtRPCEnabled() {
-		utils.Fatalf("Account unlock with HTTP access is forbidden!")
-	}
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	passwords := utils.MakePasswordList(ctx)
-	for i, account := range unlocks {
-		unlockAccount(ks, account, i, passwords)
 	}
 }

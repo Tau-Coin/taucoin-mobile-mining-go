@@ -114,7 +114,6 @@ var AppHelpFlagGroups = []flagGroup{
 	{
 		Name: "ACCOUNT",
 		Flags: []cli.Flag{
-			utils.UnlockedAccountFlag,
 			utils.PasswordFileFlag,
 			utils.ExternalSignerFlag,
 			utils.InsecureUnlockAllowedFlag,
@@ -161,8 +160,6 @@ var AppHelpFlagGroups = []flagGroup{
 	{
 		Name: "MINER",
 		Flags: []cli.Flag{
-			utils.MiningEnabledFlag,
-			utils.MinerThreadsFlag,
 			utils.MinerFeeFloorFlag,
 			utils.MinerTauerbaseFlag,
 			utils.MinerRecommitIntervalFlag,

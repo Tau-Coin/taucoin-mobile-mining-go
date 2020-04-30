@@ -12,6 +12,7 @@ type ChainConfig struct{
 
 type RangeConfig struct{
 	height uint64   // BlockNum
+	time uint32		// For pruning block 
 }
 
 type PeerConfig struct{
@@ -40,4 +41,6 @@ type TxConfig struct{
 
 type FileConfig struct{
 	//TBD
+	Type uint8 //download or shared
+	IpldPeers []common.IPLDPeerID
 }

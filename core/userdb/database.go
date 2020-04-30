@@ -38,6 +38,9 @@ func NewUserdb(db taudb.KeyValueStore) *Userdb {
 		ldb: db,
 		chainInfo: make(map[common.ChainID]ChainConfig),
 		blockRoots: make(map[common.ChainID]cid.Cid),
+
+		mutableRange: make(map[common.ChainID]RangeConfig),
+		pruneRange: make(map[common.ChainID]RangeConfig),
 	}
 }
 
