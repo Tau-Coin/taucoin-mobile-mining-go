@@ -39,6 +39,8 @@ const (
 	// AddressLength is the expected length of the address
 	AddressLength = 20
 	IpfsAddressLength = 46
+	// ChainID length
+	ChainIDLength = 64
 )
 
 var (
@@ -48,6 +50,12 @@ var (
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash   [HashLength]byte
+
+// Add in taut
+type ChainID [ChainIDLength]byte
+type RelayType string
+type IPLDPeerID string
+type RelayMultiAdd string
 
 // BytesToHash sets b to hash.
 // If b is larger than len(h), b will be cropped from the left.
