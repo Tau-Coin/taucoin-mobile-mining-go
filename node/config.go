@@ -29,7 +29,6 @@ import (
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/accounts"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/accounts/external"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/accounts/keystore"
-	"github.com/Tau-Coin/taucoin-mobile-mining-go/accounts/scwallet"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/common"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/crypto"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/log"
@@ -90,12 +89,6 @@ type Config struct {
 
 	// InsecureUnlockAllowed allows user to unlock accounts in unsafe http environment.
 	InsecureUnlockAllowed bool `toml:",omitempty"`
-
-	// NoUSB disables hardware wallet monitoring and connectivity.
-	NoUSB bool `toml:",omitempty"`
-
-	// SmartCardDaemonPath is the path to the smartcard daemon's socket
-	SmartCardDaemonPath string `toml:",omitempty"`
 
 	// IPCPath is the requested location to place the IPC endpoint. If the path is
 	// a simple file name, it is placed inside the data directory (or on the root
@@ -461,14 +454,6 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 		// we can have both, but it's very confusing for the user to see the same
 		// accounts in both externally and locally, plus very racey.
 		backends = append(backends, keystore.NewKeyStore(keydir, scryptN, scryptP))
-		if len(conf.SmartCardDaemonPath) > 0 {
-			// Start a smart card hub
-			if schub, err := scwallet.NewHub(conf.SmartCardDaemonPath, scwallet.Scheme, keydir); err != nil {
-				log.Warn(fmt.Sprintf("Failed to start smart card hub, disabling: %v", err))
-			} else {
-				backends = append(backends, schub)
-			}
-		}
 	}
 
 	return accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: conf.InsecureUnlockAllowed}, backends...), ephemeral, nil
