@@ -17,8 +17,6 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -77,21 +75,6 @@ type gtauConfig struct {
 	Taustats taustatsConfig
 }
 
-func loadConfig(file string, cfg *gtauConfig) error {
-	f, err := os.Open(file)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	err = tomlSettings.NewDecoder(bufio.NewReader(f)).Decode(cfg)
-	// Add file name to errors that have a line number.
-	if _, ok := err.(*toml.LineError); ok {
-		err = errors.New(file + ", " + err.Error())
-	}
-	return err
-}
-
 func defaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
@@ -109,33 +92,33 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gtauConfig) {
 		Node: defaultNodeConfig(),
 	}
 
-	// Load config file.
-	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
-		if err := loadConfig(file, &cfg); err != nil {
-			utils.Fatalf("%v", err)
-		}
-	}
-
 	// Apply flags.
+	// Node
 	utils.SetNodeConfig(ctx, &cfg.Node)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
+
+	// Tau
 	utils.SetTauConfig(ctx, stack, &cfg.Tau)
+	// Tau status service
 	if ctx.GlobalIsSet(utils.TauStatsURLFlag.Name) {
 		cfg.Taustats.URL = ctx.GlobalString(utils.TauStatsURLFlag.Name)
 	}
-	// ctc utils.SetShhConfig(ctx, stack, &cfg.Shh)
 
 	return stack, cfg
 }
 
 func makeFullNode(ctx *cli.Context) *node.Node {
+
+	// Configure 
 	stack, cfg := makeConfigNode(ctx)
+
+	// Register tauservice
 	utils.RegisterTauService(stack, &cfg.Tau)
 
-	// Add the Tau Stats daemon if requested.
+	// Add the tau status daemon if requested.
 	if cfg.Taustats.URL != "" {
 		utils.RegisterTauStatsService(stack, cfg.Taustats.URL)
 	}

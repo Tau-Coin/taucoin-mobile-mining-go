@@ -49,7 +49,6 @@ import (
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/p2p/netutil"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/params"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/tau"
-	"github.com/Tau-Coin/taucoin-mobile-mining-go/tau/downloader"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/taudb"
 	"github.com/Tau-Coin/taucoin-mobile-mining-go/taustats"
 	"gopkg.in/urfave/cli.v1"
@@ -162,12 +161,6 @@ var (
 		Name:  "nocode",
 		Usage: "Exclude contract code (save db lookups)",
 	}
-	defaultSyncMode = tau.DefaultConfig.SyncMode
-	SyncModeFlag    = TextMarshalerFlag{
-		Name:  "syncmode",
-		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
-		Value: &defaultSyncMode,
-	}
 	GCModeFlag = cli.StringFlag{
 		Name:  "gcmode",
 		Usage: `Blockchain garbage collection mode ("full", "archive")`,
@@ -176,10 +169,6 @@ var (
 	LightKDFFlag = cli.BoolFlag{
 		Name:  "lightkdf",
 		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
-	}
-	WhitelistFlag = cli.StringFlag{
-		Name:  "whitelist",
-		Usage: "Comma separated block number-to-hash mappings to enforce (<number>=<hash>)",
 	}
 	// Transaction pool settings
 	TxPoolLocalsFlag = cli.StringFlag{
@@ -301,14 +290,6 @@ var (
 		Usage: "Disables db compaction after import",
 	}
 	// RPC settings
-	IPCDisabledFlag = cli.BoolFlag{
-		Name:  "ipcdisable",
-		Usage: "Disable the IPC-RPC server",
-	}
-	IPCPathFlag = DirectoryFlag{
-		Name:  "ipcpath",
-		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
-	}
 	RPCEnabledFlag = cli.BoolFlag{
 		Name:  "rpc",
 		Usage: "Enable the HTTP-RPC server",
@@ -651,18 +632,6 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
-// setIPC creates an IPC path configuration from the set command line flags,
-// returning an empty string if IPC was explicitly disabled, or the set path.
-func setIPC(ctx *cli.Context, cfg *node.Config) {
-	CheckExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
-	switch {
-	case ctx.GlobalBool(IPCDisabledFlag.Name):
-		cfg.IPCPath = ""
-	case ctx.GlobalIsSet(IPCPathFlag.Name):
-		cfg.IPCPath = ctx.GlobalString(IPCPathFlag.Name)
-	}
-}
-
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for Gtau and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
@@ -781,7 +750,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	SetP2PConfig(ctx, &cfg.P2P)
-	setIPC(ctx, cfg)
 	setHTTP(ctx, cfg)
 	setWS(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
@@ -863,29 +831,6 @@ func setMiner(ctx *cli.Context, cfg *miner.Config) {
 	}
 }
 
-func setWhitelist(ctx *cli.Context, cfg *tau.Config) {
-	whitelist := ctx.GlobalString(WhitelistFlag.Name)
-	if whitelist == "" {
-		return
-	}
-	cfg.Whitelist = make(map[uint64]common.Hash)
-	for _, entry := range strings.Split(whitelist, ",") {
-		parts := strings.Split(entry, "=")
-		if len(parts) != 2 {
-			Fatalf("Invalid whitelist entry: %s", entry)
-		}
-		number, err := strconv.ParseUint(parts[0], 0, 64)
-		if err != nil {
-			Fatalf("Invalid whitelist block number %s: %v", parts[0], err)
-		}
-		var hash common.Hash
-		if err = hash.UnmarshalText([]byte(parts[1])); err != nil {
-			Fatalf("Invalid whitelist hash %s: %v", parts[1], err)
-		}
-		cfg.Whitelist[number] = hash
-	}
-}
-
 // CheckExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
@@ -939,11 +884,7 @@ func SetTauConfig(ctx *cli.Context, stack *node.Node, cfg *tau.Config) {
 	setTauerbase(ctx, ks, cfg)
 	setTxPool(ctx, &cfg.TxPool)
 	setMiner(ctx, &cfg.Miner)
-	setWhitelist(ctx, cfg)
 
-	if ctx.GlobalIsSet(SyncModeFlag.Name) {
-		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
-	}
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {
 		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 	}
@@ -1039,9 +980,6 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) (taudb.Database, taud
 		handles = makeDatabaseHandles()
 	)
 	name := "chaindata"
-	if ctx.GlobalString(SyncModeFlag.Name) == "light" {
-		name = "lightchaindata"
-	}
 	chainDb, errc := stack.OpenDatabaseWithFreezer(name, cache, handles, ctx.GlobalString("AN"), "")
 	if errc != nil {
 		Fatalf("Could not open database: %v", errc)

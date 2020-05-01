@@ -70,11 +70,8 @@ var (
 		utils.TxPoolAccountQueueFlag,
 		utils.TxPoolGlobalQueueFlag,
 		utils.TxPoolLifetimeFlag,
-		utils.SyncModeFlag,
-		utils.ExitWhenSyncedFlag,
 		utils.GCModeFlag,
 		utils.LightKDFFlag,
-		utils.WhitelistFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
 		utils.CacheTrieFlag,
@@ -111,8 +108,6 @@ var (
 		utils.WSPortFlag,
 		utils.WSApiFlag,
 		utils.WSAllowedOriginsFlag,
-		utils.IPCDisabledFlag,
-		utils.IPCPathFlag,
 		utils.InsecureUnlockAllowedFlag,
 	}
 
